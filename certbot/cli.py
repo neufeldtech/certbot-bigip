@@ -76,6 +76,7 @@ USAGE = SHORT_USAGE + """Choice of server plugins for obtaining and installing c
   --standalone      Run a standalone webserver for authentication
   %s
   --webroot         Place files in a server's webroot folder for authentication
+  %s
 
 OR use different plugins to obtain (authenticate) the cert and then install it:
 
@@ -87,8 +88,8 @@ More detailed help:
                         the available topics are:
 
    all, automation, paths, security, testing, or any of the subcommands or
-   plugins (certonly, install, register, nginx, apache, standalone, webroot,
-   etc.)
+   plugins (certonly, install, register, nginx, apache, bigip, standalone,
+   webroot, etc.)
 """
 
 
@@ -144,7 +145,11 @@ def usage_strings(plugins):
         apache_doc = "--apache          Use the Apache plugin for authentication & installation"
     else:
         apache_doc = "(the apache plugin is not installed)"
-    return USAGE % (apache_doc, nginx_doc), SHORT_USAGE
+    if "bigip" in plugins:
+        bigip_doc = "--bigip          Use the F5 BIG-IP plugin for authentication & installation"
+    else:
+        bigip_doc = "(the bigip plugin is not installed)"
+    return USAGE % (apache_doc, nginx_doc, bigip_doc), SHORT_USAGE
 
 
 def possible_deprecation_warning(config):
@@ -932,6 +937,8 @@ def _plugins_parsing(helpful, plugins):
                 help="Obtain and install certs using Apache")
     helpful.add("plugins", "--nginx", action="store_true",
                 help="Obtain and install certs using Nginx")
+    helpful.add("plugins", "--bigip", action="store_true",
+                help="Obtain and install certs using F5 BIG-IP")
     helpful.add("plugins", "--standalone", action="store_true",
                 help='Obtain certs using a "standalone" webserver.')
     helpful.add("plugins", "--manual", action="store_true",

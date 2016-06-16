@@ -22,6 +22,7 @@ class PluginEntryPoint(object):
         "certbot",
         "certbot-apache",
         "certbot-nginx",
+        "certbot-bigip",
     ]
     """Distributions for which prefix will be omitted."""
 
@@ -165,6 +166,7 @@ class PluginsRegistry(collections.Mapping):
     def find_all(cls):
         """Find plugins using setuptools entry points."""
         plugins = {}
+
         entry_points = itertools.chain(
             pkg_resources.iter_entry_points(
                 constants.SETUPTOOLS_PLUGINS_ENTRY_POINT),

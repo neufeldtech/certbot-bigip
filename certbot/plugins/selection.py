@@ -231,6 +231,9 @@ def cli_plugin_requests(config):
     if config.apache:
         req_inst = set_configurator(req_inst, "apache")
         req_auth = set_configurator(req_auth, "apache")
+    if config.bigip:
+        req_inst = set_configurator(req_inst, "bigip")
+        req_auth = set_configurator(req_auth, "bigip")
     if config.standalone:
         req_auth = set_configurator(req_auth, "standalone")
     if config.webroot:

@@ -45,7 +45,7 @@ export GPG_TTY=$(tty)
 PORT=${PORT:-1234}
 
 # subpackages to be released
-SUBPKGS=${SUBPKGS:-"acme certbot-apache certbot-nginx"}
+SUBPKGS=${SUBPKGS:-"acme certbot-apache certbot-nginx certbot-bigip"}
 subpkgs_modules="$(echo $SUBPKGS | sed s/-/_/g)"
 # certbot_compatibility_test is not packaged because:
 # - it is not meant to be used by anyone else than Certbot devs
@@ -164,7 +164,7 @@ for module in certbot $subpkgs_modules ; do
 done
 
 # pin pip hashes of the things we just built
-for pkg in acme certbot certbot-apache ; do
+for pkg in acme certbot certbot-apache certbot-bigip ; do
     echo $pkg==$version \\
     pip hash dist."$version/$pkg"/*.{whl,gz} | grep "^--hash" | python2 -c 'from sys import stdin; input = stdin.read(); print "   ", input.replace("\n--hash", " \\\n    --hash"),'
 done > /tmp/hashes.$$
