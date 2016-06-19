@@ -202,11 +202,15 @@ F5 BIG-IP Plugin Development
 
 Any questions email cstubbs @ gmail . com
 
-Known issues:
+Known F5 BIG-IP Issues
+------------
+
 * The code is crap and needs improvement.
 * Association of client SSL profile to virtual server will ONLY succeed if the new client SSL ciphers (inherited from clientssl at this point) match the existing (if any) client SSL profile ciphers
 
-Planned enhancements:
+Planned F5 BIG-IP Enhancements
+------------------------------
+
 * convert-to-https - Convert HTTP virtual to HTTPS virtual and apply client SSL profile using newly acquired cert/key
 * clone-to-https - Clone HTTP virtual to HTTPS virtual and apply client SSL profile using newly acquired cert/key
 * redirect - Apply _sys_http_redirect iRule to HTTP virtual (must be combined with clone-to-https)
