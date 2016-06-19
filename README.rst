@@ -90,7 +90,7 @@ can still use "standalone" or "webroot" plugins to obtain a certificate::
 If you want to use the F5 BIG-IP support you must use full command line options.
 Discovery of virtual servers and association to DNS hostnames is not possible.
 
- .certbot --bigip --bigip-list bigip01,bigip02 --bigip-username admin --bigip-password admin --bigip-partition Common --bigip-vs-list VS-IPv4-Web-HTTP-1,VS-IPv4-Web-HTTPS-1 --email admin@example.com -d example.com -d www.example.com -d other.example.net
+  .certbot --bigip --bigip-list bigip01,bigip02 --bigip-username admin --bigip-password admin --bigip-partition Common --bigip-vs-list VS-IPv4-Web-HTTP-1,VS-IPv4-Web-HTTPS-1 --email admin@example.com -d example.com -d www.example.com -d other.example.net
 
 Understanding the client in more depth
 --------------------------------------
@@ -118,6 +118,8 @@ Community: https://community.letsencrypt.org
 ACME spec: http://ietf-wg-acme.github.io/acme/
 
 ACME working area in github: https://github.com/ietf-wg-acme/acme
+
+F5 iControl REST API: https://devcentral.f5.com/wiki/iControlREST.HomePage.ashx
 
 
 Mailing list: `client-dev`_ (to subscribe without a Google account, send an
@@ -176,7 +178,7 @@ Current Features
   - webroot (adds files to webroot directories in order to prove control of
     domains and obtain certs)
   - nginx/0.8.48+ (highly experimental, not included in certbot-auto)
-  - F5 BIG-IP (highly experimental)
+  - F5 BIG-IP/12.1.x (highly experimental)
 
 * The private key is generated locally on your system.
 * Can talk to the Let's Encrypt CA or optionally to other ACME
@@ -192,6 +194,13 @@ Current Features
   command line.
 * Free and Open Source Software, made with Python.
 
+F5 BIG-IP Plugin Development
+============================
+
+Any questions email cstubbs@gmail.com
+
+Chat & Forums
+=============
 
 .. _Freenode: https://webchat.freenode.net?channels=%23letsencrypt
 .. _OFTC: https://webchat.oftc.net?channels=%23certbot
