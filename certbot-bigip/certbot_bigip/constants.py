@@ -6,9 +6,14 @@ from certbot import util
 HSTS_IRULE = ''
 
 CLI_DEFAULTS = dict(
-    bigip_list = '',
-    bigip_username = 'admin',
-    bigip_password = 'admin',
+    bigip_list = None,
+    bigip_username = None,
+    bigip_password = None,
+    bigip_password_env = None,
+    bigip_password_file = None,
     bigip_partition = 'Common',
-    virtual_server_list = '',
+    bigip_ciphers = None,
+    bigip_ciphers_best = '',
+    bigip_clientssl_parent = '/Common/clientssl',
+    virtual_server_list = None,
 )

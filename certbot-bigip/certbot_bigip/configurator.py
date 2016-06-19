@@ -40,20 +40,32 @@ z_util = zope.component.getUtility
 class BigipConfigurator(common.Plugin):
     """F5 BIG-IP Configurator"""
 
-    description = "F5 BIG-IP - currently doesn't work"
+    description = "F5 BIG-IP - Highly experimental!"
 
     @classmethod
     def add_parser_arguments(cls, add):
-        add("list", default=constants.CLI_DEFAULTS["bigip_list"],
+        add("list", metavar="bigip1,bigip2", default=constants.CLI_DEFAULTS["bigip_list"],
             help="CSV list of BIG-IP system hostnames or addresses")
-        add("username", default=constants.CLI_DEFAULTS["bigip_username"],
+        add("username", metavar="USERNAME", default=constants.CLI_DEFAULTS["bigip_username"],
             help="BIG-IP username (common to all listed BIG-IP systems)")
-        add("password", default=constants.CLI_DEFAULTS["bigip_password"],
+        add("password", metavar="PASSWORD", default=constants.CLI_DEFAULTS["bigip_password"],
             help="BIG-IP password (common to all listed BIG-IP systems)")
-        add("partition", default=constants.CLI_DEFAULTS["bigip_partition"],
+        add("password-env", metavar="VARIABLE_NAME", default=constants.CLI_DEFAULTS["bigip_password_env"],
+            help="Evnironment variable for BIG-IP password")
+        add("password-file", metavar="/path/to/file", default=constants.CLI_DEFAULTS["bigip_password_file"],
+            help="File to read for BIG-IP password")
+        add("partition", metavar="PartitionName", default=constants.CLI_DEFAULTS["bigip_partition"],
             help="BIG-IP partition (common to all listed BIG-IP systems)")
-        add("vs-list", default=constants.CLI_DEFAULTS["virtual_server_list"],
+        add("vs-list", metavar="vs1,vs2,vs3", default=constants.CLI_DEFAULTS["virtual_server_list"],
             help="CSV list of BIG-IP virtual server names, optionally including partition")
+        add("ciphers", metavar="CIPHER_STRING", default=constants.CLI_DEFAULTS["bigip_ciphers"],
+            help="Cipher list for client SSL profile (will not inherit from parent profile)")
+        add("clientssl-parent", metavar="/Partition/Profile", default=constants.CLI_DEFAULTS["bigip_clientssl_parent"],
+            help="Client SSL parent profile to inherit default values from")
+        add("convert-http", metavar="True|False", default=False,
+            help="Convert HTTP virtual servers to HTTPS virtual servers")
+        add("clone-http", metavar="True|False", default=False,
+            help="Clone HTTP virtual servers to HTTPS virtual servers")
 
     def __init__(self, *args, **kwargs):
         """Initialize an F5 BIG-IP Configurator"""
@@ -285,23 +297,19 @@ class BigipConfigurator(common.Plugin):
 
         """
 
+        print "DEBUG: enhance(domain=%s, enhancement=%s, options=%s)" % (domain, enhancement, options)
+
+        # DEBUG: enhance(domain=test1.equate.net.au, enhancement=redirect, options=None)
+        # DEBUG: enhance(domain=test2.equate.net.au, enhancement=redirect, options=None)
+        # DEBUG: enhance(domain=test1.equate.net.au, enhancement=staple-ocsp, options=None)
+        # DEBUG: enhance(domain=test2.equate.net.au, enhancement=staple-ocsp, options=None)
+
         return
 
     def supported_enhancements(self): # pylint: disable=no-self-use
         """Returns currently supported enhancements."""
 
-        # TODO:
-        #  1. convert-to-https - Convert HTTP virtual to HTTPS virtual
-        #  2. clone-to-https - Clone HTTP virtual to HTTPS virtual
-        #  3. redirect - Apply _sys_http_redirect iRule to HTTP virtuals
-        #  4. staple-ocsp - Configure OCSP stapling
-        #  5. http-sts - Configure HTTP Strict Transport Security
-        #  6. http-pkp - Configure HTTP Public Key Pinning
-        #  7. best-practice - Configure best practice ciphers and other items at time of use (if code is up to date)
-
-        # Currently can't do any of those...
-
-        return []
+        return ['ensure-http-header', 'redirect', 'staple-ocsp']
 
     def get_all_certs_keys(self):
 
