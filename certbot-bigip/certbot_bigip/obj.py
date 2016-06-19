@@ -310,14 +310,9 @@ class Bigip(object):
             msg = ("iRule creation on {0} failed. {2}{1}{2}".format(self.host, e, os.linesep))
             raise errors.AuthorizationError(msg)
 
-    def create_irule_HTTP01(self, achall):
+    def create_irule_HTTP01(self, token, http_response_content):
         try:
-            # Create all of the challenge responses within the iRule
-            token = achall.chall.encode("token")
             irule_name = "Certbot-Letsencrypt-" + token
-            response, validation = achall.response_and_validation()
-
-            http_response_content = validation.encode()
             irule_text = "when HTTP_REQUEST { if {[HTTP::uri] equals {/.well-known/acme-challenge/%s}} { HTTP::respond 200 -version auto content {%s} } }" % (token, http_response_content)
 
             payload = {}
@@ -330,9 +325,9 @@ class Bigip(object):
             request = self.session.post("https://%s:%d/mgmt/tm/ltm/rule" % (self.host, self.port), data=json.dumps(payload), timeout=4)
 
             if request.status_code == requests.codes.ok:
-                return response
+                return True
             else:
-                return None
+                return False
 
         except Exception, e:
             msg = ("iRule creation on {0} failed. {2}{1}{2}".format(self.host, e, os.linesep))
@@ -456,14 +451,14 @@ class Bigip(object):
             msg = ("Retrieval of iRules for virtual server on {0} failed. {2}{1}{2}".format(self.host, e, os.linesep))
             raise errors.AuthorizationError(msg)
 
-    def associate_irule_virtual(self, achall, virtual_name):
+    def associate_irule_virtual(self, token, virtual_name):
         try:
             irules = self.irules_on_virtual(virtual_name)
 
             if irules['result'] != False:
                 payload = {}
                 payload['rules'] = irules['rules']
-                payload['rules'].append("Certbot-Letsencrypt-" + achall.chall.encode("token"))
+                payload['rules'].append("Certbot-Letsencrypt-" + token)
 
                 request = self.session.patch("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s" % (self.host, self.port, self.partition, virtual_name), json.dumps(payload), timeout=4)
 

@@ -2,8 +2,10 @@
 
 import zope.component
 import zope.interface
+import OpenSSL.crypto
 
 from acme import challenges
+from acme import crypto_util as acme_crypto_util
 
 from certbot import errors
 from certbot import interfaces
@@ -147,20 +149,20 @@ class BigipConfigurator(common.Plugin):
 
         tlssni01_chall_doer = tls_sni_01.BigipTlsSni01(self)
 
-        count = 0
-        for achall in achalls:
+        for count, achall in enumerate(achalls):
             if isinstance(achall.chall, challenges.HTTP01):
+                response, validation = achall.response_and_validation()
+                token = achall.chall.encode("token")
+                responses[count] = response
 
                 for bigip in self.bigip_list:
-                    response = bigip.create_irule_HTTP01(achall)
+                    bigip.create_irule_HTTP01(token, validation.encode())
 
                     for virtual_server in self.bigip_vs_list:
-                        responses[count] = response
-
                         if bigip.exists_virtual(virtual_server) and bigip.http_virtual(virtual_server):
                             # virtual server exists and has a HTTP profile attached to it
                             # associate the iRule to it which will respond for HTTP01 validations
-                            bigip.associate_irule_virtual(achall, virtual_server)
+                            bigip.associate_irule_virtual(token, virtual_server)
 
             else: # TLSSNI01
                 for bigip in self.bigip_list:
@@ -175,8 +177,6 @@ class BigipConfigurator(common.Plugin):
                             bigip.create_client_ssl_profile(client_ssl_name, 'default.crt', 'default.key', None, challenge.response(challenge.account_key).z_domain)
 
                             bigip.associate_client_ssl_virtual(virtual_server, client_ssl_name)
-
-            ++count
 
         return responses
 
@@ -220,6 +220,10 @@ class BigipConfigurator(common.Plugin):
         client SSL profiles, and ensures they are associated with the specified
         virtual server.
 
+        NOTE: This gets run for EVERY primary certificate name and every subjectAltName
+              in a certificate. Need to improve efficiency within F5 BIG-IP config by
+              not creating lots of duplicates of certs/keys.
+
         :raises errors.PluginError: When unable to deploy certificate due to
             a lack of directives
 
@@ -231,7 +235,6 @@ class BigipConfigurator(common.Plugin):
             key_name = "Certbot-Letsencrypt-%s.key" % domain
             chain_name = "Certbot-Letsencrypt-%s-chain.crt" % domain
             fullchain_name = "Certbot-Letsencrypt-%s-fullchain.crt" % domain
-            client_ssl_name = "Certbot-Letsencrypt-%s" % domain
 
             bigip.upload_file(cert_path, cert_name)
             bigip.create_crypto_cert(cert_name, cert_name)
@@ -248,7 +251,18 @@ class BigipConfigurator(common.Plugin):
             # search for existing client SSL profiles which match: Certbot-Letsencrypt-%{DOMAIN} AND have SNI name = %{DOMAIN}
             # if no matching client SSL profiles create profiles for certificate primary name and all alternative names
 
-            bigip.create_client_ssl_profile(client_ssl_name, cert_name, key_name, chain_name, domain)
+            #with open(cert_path, 'r') as content_file:
+            #    cert_path_content = content_file.read()
+
+            #c=OpenSSL.crypto
+            #cert=c.load_certificate(c.FILETYPE_PEM, cert_path_content)
+
+            #for cert_name in acme_crypto_util._pyopenssl_cert_or_req_san(cert):
+
+            cert_name = domain
+
+            client_ssl_name = "Certbot-Letsencrypt-%s" % cert_name
+            bigip.create_client_ssl_profile(client_ssl_name, cert_name, key_name, chain_name, cert_name)
 
             for virtual_server in self.bigip_vs_list:
                 if bigip.client_ssl_virtual(virtual_server) == True:
