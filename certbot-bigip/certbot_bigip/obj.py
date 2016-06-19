@@ -1,8 +1,65 @@
 """Module contains classes used by the F5 BIG-IP Configurator."""
 
+import requests
+
+# this is just really annoying
+requests.packages.urllib3.disable_warnings()
+
+import json
+import os
+import logging
+import random
+import string
+
+from acme import challenges
+
+from certbot import errors
+from certbot import interfaces
+from certbot import reverter
+from certbot import util
+
 from certbot.plugins import common
 
+from collections import defaultdict
+
+from icontrol.session import iControlRESTSession
+
 class Bigip(object):
+    """ Object representing a single F5 BIG-IP system
+
+    Function list:
+        def __init__(self, host, port, username, password, partition='Common', verify_certificate=False):
+        def __str__(self):
+        def test(self):
+        def get_version(self):
+        def active(self):
+        def save(self):
+        def save_ucs(self, ucs_name):
+        def upload_file(self, local_file_name, destination_file_name):
+        def exists_crypto_cert(self, object_name):
+        def exists_crypto_key(self, object_name):
+        def create_crypto_cert(self, object_name, file_name):
+        def create_crypto_key(self, object_name, file_name):
+
+        def create_client_ssl_profile(self, object_name, crypto_cert, crypto_key, crypto_chain)
+
+        def exists_irule(self, irule_name):
+        def create_irule_HTTP01(self, achall):
+        def delete_irule(self, achall):
+
+        def exists_virtual(self, virtual_name):
+        def profile_on_virtual(self, virtual_name, profile_type):
+        def http_virtual(self, virtual_name):
+        def client_ssl_virtual(self, virtual_name):
+        def associate_client_ssl_virtual(self, virtual_name, sni):
+        def remove_client_ssl_virtual(self, virtual_name, sni):
+
+        def irules_on_virtual(self, virtual_name):
+        def associate_irule_virtual(self, achall, virtual_name):
+        def remove_irule_virtual(self, achall, virtual_name):
+
+    """
+
     def __init__(self, host, port, username, password, partition='Common', verify_certificate=False):
         self.host = host
         self.port = port
@@ -36,6 +93,20 @@ class Bigip(object):
                    "and --bigip-password options)".format(self.host, e, os.linesep))
             raise errors.AuthorizationError(msg)
 
+    def get_version(self):
+        try:
+            self.version = self.session.get("https://%s:%d/mgmt/tm/cli/version" % (self.host, self.port), timeout=4).json()['entries']['https://localhost/mgmt/tm/cli/version/0']['nestedStats']['entries']['active']['description']
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
+
+        return self.version
+
     def active(self):
         """ Return true if active for any of the traffic groups which virtual servers (self.bigip_vs_list) are within"""
 
@@ -65,9 +136,40 @@ class Bigip(object):
 
         return False
 
-    def get_version(self):
+    def upload_file(self, local_file_name, destination_file_name):
         try:
-            self.version = self.session.get("https://%s:%d/mgmt/tm/cli/version" % (self.host, self.port), timeout=4).json()['entries']['https://localhost/mgmt/tm/cli/version/0']['nestedStats']['entries']['active']['description']
+            chunk_size = 512 * 1024
+
+            file_handle = open(local_file_name, 'rb')
+            file_size = os.path.getsize(local_file_name)
+            start = 0
+
+            while True:
+                file_slice = file_handle.read(chunk_size)
+
+                if not file_slice:
+                    break
+
+                current_bytes = len(file_slice)
+                if current_bytes < chunk_size:
+                    end = file_size
+                else:
+                    end = start + current_bytes
+
+                content_range = "%s-%s/%s" % (start, end - 1, file_size)
+                headers =  {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Range': content_range,
+                }
+
+                request = self.session.post("https://%s:%d/mgmt/shared/file-transfer/uploads/%s" % (self.host, self.port, destination_file_name), data=file_slice, headers=headers, timeout=4)
+
+                start += current_bytes
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
 
         except Exception, e:
             msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
@@ -77,7 +179,123 @@ class Bigip(object):
                    "and --bigip-password options)".format(self.host, e, os.linesep))
             raise errors.AuthorizationError(msg)
 
-        return self.version
+    def exists_crypto_cert(self, object_name):
+        try:
+            request = self.session.post("https://%s:%d/mgmt/tm/sys/crypto/cert/~%s~%s" % (self.host, self.port, self.partition, object_name), timeout=4)
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
+
+    def exists_crypto_key(self, object_name):
+        try:
+            request = self.session.post("https://%s:%d/mgmt/tm/sys/crypto/key/~%s~%s" % (self.host, self.port, self.partition, object_name), timeout=4)
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
+
+    def create_crypto_cert(self, object_name, file_name):
+        try:
+            payload = {}
+            payload['command'] = 'install'
+            payload['name'] = "/%s/%s" % (self.partition, object_name)
+            payload['from-local-file'] = "/var/config/rest/downloads/%s" % file_name
+
+            # Doesn't seem to matter much here if it already exists, objects will be overwritten
+            request = self.session.post("https://%s:%d/mgmt/tm/sys/crypto/cert" % (self.host, self.port), data=json.dumps(payload), timeout=4)
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
+
+    def create_crypto_key(self, object_name, file_name):
+        try:
+            payload = {}
+            payload['command'] = 'install'
+            payload['name'] = "/%s/%s" % (self.partition, object_name)
+            payload['from-local-file'] = "/var/config/rest/downloads/%s" % file_name
+            payload['securityType'] = 'normal'
+            # payload['keyType'] = 'rsa-private'
+
+            # Doesn't seem to matter much here if it already exists, objects will be overwritten
+            request = self.session.post("https://%s:%d/mgmt/tm/sys/crypto/key" % (self.host, self.port), data=json.dumps(payload), timeout=4)
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
+
+    def create_client_ssl_profile(self, object_name, crypto_cert=None, crypto_key=None, crypto_chain=None, server_name=None):
+        try:
+            if crypto_cert == None:
+                crypto_cert = 'default.crt'
+
+            if crypto_key == None:
+                crypto_key = 'default.key'
+
+            payload = {}
+            payload['name'] = object_name
+            payload['partition'] = self.partition
+            payload['defaultsFrom'] = '/Common/clientssl'
+            payload['cert'] = crypto_cert
+            payload['key'] = crypto_key
+
+            if crypto_chain != None:
+                payload['chain'] = crypto_chain
+
+            if server_name != None:
+                payload['serverName'] = server_name
+
+            request = self.session.post("https://%s:%d/mgmt/tm/ltm/profile/client-ssl" % (self.host, self.port), data=json.dumps(payload), timeout=4)
+
+            if request.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+
+        except Exception, e:
+            msg = ("Connection to F5 BIG-IP iControl REST API on {0} failed."
+                   "Error raised was {2}{1}{2}"
+                   "(You most probably need to ensure the username and"
+                   "password is correct. Make sure you use the --bigip-username"
+                   "and --bigip-password options)".format(self.host, e, os.linesep))
+            raise errors.AuthorizationError(msg)
 
     def exists_irule(self, irule_name):
         try:
@@ -174,42 +392,19 @@ class Bigip(object):
     def client_ssl_virtual(self, virtual_name):
         return self.profile_on_virtual(virtual_name, 'client-ssl')
 
-    def associate_client_ssl_virtual(self, virtual_name, sni):
+    def associate_client_ssl_virtual(self, virtual_name, client_ssl_name):
         try:
-            # creates the profile
-            profile = {}
+            payload = {}
 
-            profile['kind'] = 'tm:ltm:profile:client-ssl:client-sslstate'
-            profile['partition'] = self.partition
-            profile['name'] = self.profile_base_name + "-" + sni
-            profile['defaultsFrom'] = '/Common/clientssl'
-            profile['serverName'] = sni
+            payload['kind'] = 'tm:ltm:virtual:profiles:profilesstate'
+            payload['partition'] = self.partition
+            payload['name'] = client_ssl_name
+            payload['context'] = 'clientside'
 
-            request = self.session.post("https://%s:%d/mgmt/tm/ltm/profile/client-ssl" % (self.host, self.port), data=json.dumps(profile), timeout=4)
+            request = self.session.post("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s/profiles" % (self.host, self.port, self.partition, virtual_name), json.dumps(payload), timeout=4)
 
             if request.status_code == requests.codes.ok:
-                profile_request = self.session.get("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s/profiles" % (self.host, self.port, self.partition, virtual_name), timeout=4)
-
-                if profile_request.status_code == requests.codes.ok and 'items' in request_json:
-                    profiles = profile_request.json()
-
-                    profile_reference = {}
-
-                    profile_reference['kind'] = 'tm:ltm:virtual:profiles:profilesstate'
-                    profile_reference['partition'] = self.partition
-                    profile_reference['name'] = self.profile_base_name + "-" + sni
-                    profile_reference['context'] = 'clientside'
-
-                    profiles['items'].append(profile_reference)
-
-                    associate_profile_request = self.session.patch("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s/profiles" % (self.host, self.port, self.partition, virtual_name), json.dumps(profiles), timeout=4)
-
-                    if associate_profile_request.status_code == requests.codes.ok:
-                        return True
-                    else:
-                        return False
-                else:
-                    return False
+                return True
             else:
                 return False
 

@@ -87,10 +87,13 @@ can still use "standalone" or "webroot" plugins to obtain a certificate::
 
   ./certbot-auto certonly --standalone --email admin@example.com -d example.com -d www.example.com -d other.example.net
 
+How to use the client for F5 BIG-IP
+-----------------------------------
+
 If you want to use the F5 BIG-IP support you must use full command line options.
 Discovery of virtual servers and association to DNS hostnames is not possible.
 
-  .certbot --bigip --bigip-list bigip01,bigip02 --bigip-username admin --bigip-password admin --bigip-partition Common --bigip-vs-list VS-IPv4-Web-HTTP-1,VS-IPv4-Web-HTTPS-1 --email admin@example.com -d example.com -d www.example.com -d other.example.net
+  ./certbot --bigip --bigip-list bigip01,bigip02 --bigip-username admin --bigip-password admin --bigip-partition Common --bigip-vs-list VS-IPv4-Web-HTTP-1,VS-IPv4-Web-HTTPS-1 --email admin@example.com -d example.com -d www.example.com -d other.example.net
 
 Understanding the client in more depth
 --------------------------------------
@@ -197,7 +200,7 @@ Current Features
 F5 BIG-IP Plugin Development
 ============================
 
-Any questions email cstubbs@gmail.com
+Any questions email cstubbs @ gmail . com
 
 Chat & Forums
 =============

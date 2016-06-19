@@ -23,15 +23,10 @@ from collections import defaultdict
 
 from icontrol.session import iControlRESTSession
 
-import requests
-import json
 import os
 import logging
 import random
 import string
-
-# this is just really annoying
-requests.packages.urllib3.disable_warnings()
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +95,7 @@ class BigipConfigurator(common.Plugin):
         if self.conf('list') != '':
             bigip_host_list = self.conf('list').split(',')
             for bigip_host in bigip_host_list:
-                bigip = Bigip(bigip_host, 443, self.conf('username'), self.conf('password'), self.conf('partition'), False)
+                bigip = obj.Bigip(bigip_host, 443, self.conf('username'), self.conf('password'), self.conf('partition'), False)
 
                 if bigip.test() == False:
                     if len(bigip_host_list) > 1:
@@ -175,7 +170,11 @@ class BigipConfigurator(common.Plugin):
                         responses[count] = response
 
                         if bigip.exists_virtual(virtual_server) and bigip.http_virtual(virtual_server) and bigip.client_ssl_virtual(virtual_server):
-                            bigip.associate_client_ssl_virtual(virtual_server, challenge.response(challenge.account_key).z_domain)
+                            client_ssl_name = "Certbot-LetsEncrypt-%s" % challenge.response(challenge.account_key).z_domain
+
+                            bigip.create_client_ssl_profile(client_ssl_name, 'default.crt', 'default.key', None, challenge.response(challenge.account_key).z_domain)
+
+                            bigip.associate_client_ssl_virtual(virtual_server, client_ssl_name)
 
             ++count
 
@@ -228,13 +227,32 @@ class BigipConfigurator(common.Plugin):
 
         for bigip in self.bigip_list:
             # install cert/key/chain/fullchain
+            cert_name = "Certbot-Letsencrypt-%s.crt" % domain
+            key_name = "Certbot-Letsencrypt-%s.key" % domain
+            chain_name = "Certbot-Letsencrypt-%s-chain.crt" % domain
+            fullchain_name = "Certbot-Letsencrypt-%s-fullchain.crt" % domain
+            client_ssl_name = "Certbot-Letsencrypt-%s" % domain
+
+            bigip.upload_file(cert_path, cert_name)
+            bigip.create_crypto_cert(cert_name, cert_name)
+
+            bigip.upload_file(key_path, key_name)
+            bigip.create_crypto_key(key_name, key_name)
+
+            bigip.upload_file(chain_path, chain_name)
+            bigip.create_crypto_cert(chain_name, chain_name)
+
+            # bigip.upload_file(fullchain_path, fullchain_name)
+            # bigip.create_crypto_cert(fullchain_name, fullchain_name)
 
             # search for existing client SSL profiles which match: Certbot-Letsencrypt-%{DOMAIN} AND have SNI name = %{DOMAIN}
             # if no matching client SSL profiles create profiles for certificate primary name and all alternative names
 
-            for virtual_server in self.bigip_vs_list:
-                # ensure client SSL profiles are associated with virtual server, leave other existing profiles
+            bigip.create_client_ssl_profile(client_ssl_name, cert_name, key_name, chain_name, domain)
 
+            for virtual_server in self.bigip_vs_list:
+                if bigip.client_ssl_virtual(virtual_server) == True:
+                    bigip.associate_client_ssl_virtual(virtual_server, client_ssl_name)
 
         return
 
@@ -261,10 +279,11 @@ class BigipConfigurator(common.Plugin):
         # TODO:
         #  1. convert-to-https - Convert HTTP virtual to HTTPS virtual
         #  2. clone-to-https - Clone HTTP virtual to HTTPS virtual
-        #  4. redirect - Apply _sys_http_redirect iRule to HTTP virtuals
-        #  5. staple-ocsp - Configure OCSP stapling
-        #  6. http-sts - Configure HTTP Strict Transport Security
+        #  3. redirect - Apply _sys_http_redirect iRule to HTTP virtuals
+        #  4. staple-ocsp - Configure OCSP stapling
+        #  5. http-sts - Configure HTTP Strict Transport Security
         #  6. http-pkp - Configure HTTP Public Key Pinning
+        #  7. best-practice - Configure best practice ciphers and other items at time of use (if code is up to date)
 
         # Currently can't do any of those...
 
