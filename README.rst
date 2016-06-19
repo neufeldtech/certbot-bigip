@@ -202,6 +202,20 @@ F5 BIG-IP Plugin Development
 
 Any questions email cstubbs @ gmail . com
 
+Known issues:
+* The code is crap and needs improvement.
+* Association of client SSL profile to virtual server will ONLY succeed if the new client SSL ciphers (inherited from clientssl at this point) match the existing (if any) client SSL profile ciphers
+
+Planned enhancements:
+* convert-to-https - Convert HTTP virtual to HTTPS virtual and apply client SSL profile using newly acquired cert/key
+* clone-to-https - Clone HTTP virtual to HTTPS virtual and apply client SSL profile using newly acquired cert/key
+* redirect - Apply _sys_http_redirect iRule to HTTP virtual (must be combined with clone-to-https)
+* staple-ocsp - Configure OCSP stapling
+* http-sts - Configure HTTP Strict Transport Security
+* http-pkp - Configure HTTP Public Key Pinning
+* best-ciphers - Configure best practice ciphers at time of use (if code is up to date)
+* best-other - Configure best practice for other client SSL options at time of use (if code is up to date)
+
 Chat & Forums
 =============
 
