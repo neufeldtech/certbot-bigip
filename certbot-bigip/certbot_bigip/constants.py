@@ -8,7 +8,7 @@ HSTS_IRULE = ''
 CLI_DEFAULTS = dict(
     bigip_list = '',
     bigip_username = 'admin',
-    bigip_password = 'password',
+    bigip_password = 'admin',
     bigip_partition = 'Common',
     virtual_server_list = '',
 )

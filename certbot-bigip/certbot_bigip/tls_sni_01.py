@@ -27,37 +27,12 @@ class BigipTlsSni01(common.TLSSNI01):
 
     """
 
-    IRULE_TEMPLATE = "when HTTP_REQUEST {\n    set blah {blah}\n}"
-
     def __init__(self, *args, **kwargs):
         super(BigipTlsSni01, self).__init__(*args, **kwargs)
 
-    def perform(self):
+    def perform(self, achall):
         """Perform a TLS-SNI-01 challenge."""
-        if not self.achalls:
-            return []
 
-        responses = []
+        response = self._setup_challenge_cert(achall)
 
-        # Create all of the challenge certs
-        for achall in self.achalls:
-            responses.append(self._setup_challenge_cert(achall))
-
-        return responses
-
-    def _mod_config(self):
-        """Modifies F5 BIG-IP config include challenge iRules associated
-           with virtual servers
-
-        Result: F5 BIG-IP config includes iRules associated with virtual
-                servers which respond for issued challs
-
-        :returns: All TLS-SNI-01 addresses used
-        :rtype: set
-
-        """
-        addrs = set()
-
-        addrs.add('122.99.119.187')
-
-        return addrs
+        return response

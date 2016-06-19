@@ -87,6 +87,10 @@ can still use "standalone" or "webroot" plugins to obtain a certificate::
 
   ./certbot-auto certonly --standalone --email admin@example.com -d example.com -d www.example.com -d other.example.net
 
+If you want to use the F5 BIG-IP support you must use full command line options.
+Discovery of virtual servers and association to DNS hostnames is not possible.
+
+ .certbot --bigip --bigip-list bigip01,bigip02 --bigip-username admin --bigip-password admin --bigip-partition Common --bigip-vs-list VS-IPv4-Web-HTTP-1,VS-IPv4-Web-HTTPS-1 --email admin@example.com -d example.com -d www.example.com -d other.example.net
 
 Understanding the client in more depth
 --------------------------------------
@@ -172,6 +176,7 @@ Current Features
   - webroot (adds files to webroot directories in order to prove control of
     domains and obtain certs)
   - nginx/0.8.48+ (highly experimental, not included in certbot-auto)
+  - F5 BIG-IP (highly experimental)
 
 * The private key is generated locally on your system.
 * Can talk to the Let's Encrypt CA or optionally to other ACME
