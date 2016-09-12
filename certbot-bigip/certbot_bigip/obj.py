@@ -350,6 +350,7 @@ class Bigip(object):
 
     def exists_virtual(self, virtual_name):
         try:
+            print "DEBUG: Checking for existence of VS %s/%s" % (self.partition, virtual_name)
             request = self.session.get("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s" % (self.host, self.port, self.partition, virtual_name), timeout=4)
 
             if request.status_code == requests.codes.ok:
@@ -457,8 +458,8 @@ class Bigip(object):
 
             if irules['result'] != False:
                 payload = {}
-                payload['rules'] = irules['rules']
-                payload['rules'].append("Certbot-Letsencrypt-" + token)
+                payload['rules'] = ["Certbot-Letsencrypt-" + token] + irules['rules']
+                # payload['rules'].append("Certbot-Letsencrypt-" + token)
 
                 request = self.session.patch("https://%s:%d/mgmt/tm/ltm/virtual/~%s~%s" % (self.host, self.port, self.partition, virtual_name), json.dumps(payload), timeout=4)
 

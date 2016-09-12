@@ -102,6 +102,8 @@ class BigipConfigurator(common.Plugin):
 
         if self.conf('vs_list') != '':
             self.bigip_vs_list = self.conf('vs_list').split(',')
+            for vs in self.bigip_vs_list:
+                print "DEBUG: Virtual server: %s" % vs
         else:
             msg = ("--bigip-vs-list is required when using the F5 BIG-IP plugin")
             raise errors.MissingCommandlineFlag(msg)
@@ -126,6 +128,9 @@ class BigipConfigurator(common.Plugin):
                         raise errors.AuthorizationError(msg)
                 else:
                     self.bigip_list.append(bigip)
+        else:
+            msg = ("--bigip-list is required when using the F5 BIG-IP plugin")
+            raise errors.MissingCommandlineFlag(msg)
 
     def config_test(self):
 
@@ -171,6 +176,7 @@ class BigipConfigurator(common.Plugin):
                     bigip.create_irule_HTTP01(token, validation.encode())
 
                     for virtual_server in self.bigip_vs_list:
+                        print "DEBUG: Associating irule with %s" % virtual_server
                         if bigip.exists_virtual(virtual_server) and bigip.http_virtual(virtual_server):
                             # virtual server exists and has a HTTP profile attached to it
                             # associate the iRule to it which will respond for HTTP01 validations
@@ -200,12 +206,12 @@ class BigipConfigurator(common.Plugin):
                 for bigip in self.bigip_list:
                     for virtual_server in self.bigip_vs_list:
                         if bigip.exists_virtual(virtual_server):
-                            if bigip.remove_irule_virtual(achall, virtual_server) == True:
-                                bigip.delete_irule(achall)
-                            else:
+                            if bigip.remove_irule_virtual(achall, virtual_server) != True:
                                 print "ERROR: iRule could not be removed from virtual server '%s' you may need to do this manually" % virtual_server
+                            bigip.delete_irule(achall)
                         else:
                             print "ERROR: The virtual server '%s' does not appear to exist on this BIG-IP" % virtual_server
+                            bigip.delete_irule(achall)
             else: # TLSSNI01
                 print "FIX ME"
 
